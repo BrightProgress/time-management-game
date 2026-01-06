@@ -22,7 +22,7 @@ Write-Host ""
 
 Write-Host "⏳ Remaining Steps:" -ForegroundColor Yellow
 Write-Host "  [ ] Enable GitHub Pages in repository settings" -ForegroundColor Yellow
-Write-Host "  [ ] Wait for workflow to complete (~2 minutes)" -ForegroundColor Yellow
+Write-Host "  [ ] Wait for workflow to complete (about 2 minutes)" -ForegroundColor Yellow
 Write-Host "  [ ] Verify site is accessible" -ForegroundColor Yellow
 Write-Host ""
 
