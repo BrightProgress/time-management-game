@@ -1,0 +1,877 @@
+# Software Specification Document: "Getting Things Done" Game
+
+## 1. Executive Summary
+
+### 1.1 Overview
+"Getting Things Done" is a time management simulation game where players assume the role of a teacher managing a typical school week. The game will be implemented as a Progressive Web App (PWA) using HTML5 and JavaScript, deployable via a single URL and optimized for mobile devices.
+
+### 1.2 Core Objectives
+- Simulate 40 rounds (5 days × 8 rounds/day) of teacher workload management
+- Balance teaching, administrative tasks, collaborative activities, and personal energy
+- Provide engaging visual feedback reflecting player state and decisions
+- Enable easy customization of game parameters, rules, and visual assets
+
+---
+
+## 2. Technical Architecture
+
+### 2.1 Technology Stack
+- **Frontend**: HTML5, CSS3, JavaScript (ES6+)
+- **Architecture**: Single Page Application (SPA)
+- **Deployment**: Static hosting (single HTML file with inline/minimal external assets)
+- **Progressive Web App**: Service Worker for offline capability, manifest.json for installability
+
+### 2.2 File Structure
+```
+/getting-things-done/
+├── index.html                 # Main application file
+├── manifest.json              # PWA manifest
+├── service-worker.js          # Offline capability
+├── css/
+│   └── styles.css            # Application styles
+├── js/
+│   ├── config.js             # Game configuration and rules
+│   ├── game-state.js         # State management
+│   ├── game-engine.js        # Core game logic
+│   ├── ui-controller.js      # UI rendering and interaction
+│   └── utils.js              # Helper functions
+└── assets/
+    ├── themes/
+    │   └── default/
+    │       ├── backgrounds/
+    │       │   ├── energy-high.jpg      # Energy > 10
+    │       │   ├── energy-medium.jpg    # Energy 5-10
+    │       │   ├── energy-low.jpg       # Energy 1-4
+    │       │   └── energy-depleted.jpg  # Energy 0
+    │       ├── buttons/
+    │       │   ├── teach.png
+    │       │   ├── admin.png
+    │       │   ├── collaborate.png
+    │       │   ├── break.png
+    │       │   └── meeting.png
+    │       └── celebrations/
+    │           └── completion.gif
+    └── icons/
+        └── app-icon-*.png    # PWA icons
+```
+
+---
+
+## 3. Game Configuration System
+
+### 3.1 Configuration File (config.js)
+
+```javascript
+const GAME_CONFIG = {
+  // Theme Configuration
+  theme: {
+    name: 'default',
+    basePath: './assets/themes/default/'
+  },
+  
+  // Game Structure
+  structure: {
+    totalRounds: 40,
+    roundsPerDay: 8,
+    totalDays: 5
+  },
+  
+  // Fixed Events
+  fixedEvents: {
+    staffMeetings: [
+      { day: 2, round: 3 },
+      { day: 4, round: 6 }
+    ]
+  },
+  
+  // Initial Task Load
+  initialTasks: {
+    teachingModules: 80,
+    collaborativeUnits: 20,
+    adminUnitsPerDay: 4
+  },
+  
+  // Task Completion Rates
+  taskRates: {
+    teaching: {
+      energyHigh: { threshold: 7, units: 3 },
+      energyMedium: { threshold: 3, maxThreshold: 7, units: 2 },
+      energyLow: { threshold: 0, maxThreshold: 3, units: 1 },
+      energyDepleted: { threshold: 0, exact: true, units: 0 }
+    },
+    admin: {
+      energyHigh: { threshold: 6, units: 4 },
+      energyLow: { threshold: 0, maxThreshold: 6, units: 2 },
+      energyDepleted: { threshold: 0, exact: true, units: 0 }
+    },
+    collaborative: {
+      energyHigh: { threshold: 6, units: 4 },
+      energyLow: { threshold: 0, maxThreshold: 6, units: 2 }
+    }
+  },
+  
+  // Energy System
+  energy: {
+    dailyStart: 16,
+    costs: {
+      teaching: 2,
+      admin: 2,
+      collaborative: 1,
+      meeting: 1
+    },
+    gains: {
+      break: 2
+    }
+  },
+  
+  // Crisis/Disruption System
+  disruptions: {
+    total: 3,
+    types: [
+      'tech_failure',
+      'student_emergency',
+      'guest_lecture',
+      'event_practice'
+    ]
+  },
+  
+  // Penalty Rules
+  penalties: {
+    teachingMinPerDay: 10,
+    collaborativeMinTotal: 10,
+    adminMaxEndOfDay: 8,
+    skipMeeting: 1
+  },
+  
+  // Admin Task Compounding
+  adminCompounding: {
+    enabled: true,
+    multiplier: 2
+  }
+};
+```
+
+### 3.2 Rule Engine Configuration
+
+```javascript
+const GAME_RULES = [
+  // Rule 1: Staff Meeting Required
+  {
+    name: 'staff_meeting_scheduled',
+    condition: (state) => {
+      return state.fixedEvents.includes(state.currentRoundId);
+    },
+    action: (state) => {
+      state.availableActions = ['attend_meeting', 'skip_meeting'];
+      state.mandatoryAction = 'attend_meeting';
+    }
+  },
+  
+  // Rule 2: Disruption Occurs
+  {
+    name: 'disruption_active',
+    condition: (state) => {
+      return state.currentDisruption !== null;
+    },
+    action: (state) => {
+      state.actionSuccess = false;
+      state.disruptionMessage = getDisruptionMessage(state.currentDisruption);
+    }
+  },
+  
+  // Rule 3: Energy Depleted
+  {
+    name: 'energy_depleted',
+    condition: (state) => {
+      return state.energy <= 0;
+    },
+    action: (state) => {
+      state.availableActions = ['break'];
+      state.forceBreak = true;
+    }
+  },
+  
+  // Rule 4: End of Day - Admin Compounding
+  {
+    name: 'end_of_day_admin',
+    condition: (state) => {
+      return state.isEndOfDay && state.adminRemaining > 0;
+    },
+    action: (state) => {
+      state.adminRemaining = state.adminRemaining * GAME_CONFIG.adminCompounding.multiplier;
+      if (state.adminRemaining > GAME_CONFIG.penalties.adminMaxEndOfDay) {
+        state.penalties.admin += 1;
+      }
+    }
+  },
+  
+  // Rule 5: End of Day - Teaching Minimum
+  {
+    name: 'end_of_day_teaching',
+    condition: (state) => {
+      return state.isEndOfDay && state.dailyTeachingCompleted < GAME_CONFIG.penalties.teachingMinPerDay;
+    },
+    action: (state) => {
+      state.penalties.teaching += 1;
+    }
+  },
+  
+  // Rule 6: End of Game - Collaborative Minimum
+  {
+    name: 'end_game_collaborative',
+    condition: (state) => {
+      return state.isGameEnd && state.collaborativeCompleted < GAME_CONFIG.penalties.collaborativeMinTotal;
+    },
+    action: (state) => {
+      state.penalties.collaborative += 1;
+    }
+  }
+];
+```
+
+---
+
+## 4. User Interface Specifications
+
+### 4.1 Mobile-First Design Requirements
+- **Viewport**: 320px - 428px width (standard mobile devices)
+- **Orientation**: Portrait mode optimized
+- **Touch Targets**: Minimum 44×44px for all interactive elements
+- **Safe Areas**: Respect device notches and navigation bars
+
+### 4.2 Screen Layout
+
+#### 4.2.1 Game Round Screen
+```
+┌─────────────────────────────────────┐
+│     Status Bar                      │ 10%
+│  Day X | Round Y | Energy: ##      │
+├─────────────────────────────────────┤
+│                                     │
+│                                     │
+│     Background Image                │ 60%
+│     (Teacher in Classroom)          │
+│     (Energy-level dependent)        │
+│                                     │
+│                                     │
+├─────────────────────────────────────┤
+│     Task Summary Panel              │ 15%
+│  Teaching: ##/80 | Admin: ##       │
+│  Collaborative: ##/20              │
+├─────────────────────────────────────┤
+│     Action Buttons                  │ 15%
+│  [Teach] [Admin] [Collab] [Break]  │
+└─────────────────────────────────────┘
+```
+
+#### 4.2.2 Result Phase Screen
+```
+┌─────────────────────────────────────┐
+│     Status Bar                      │ 10%
+├─────────────────────────────────────┤
+│                                     │
+│     Result Background               │
+│                                     │ 50%
+│     [Outcome Description Text]      │
+│                                     │
+├─────────────────────────────────────┤
+│     Detailed Outcome                │ 25%
+│  ✓ Modules Taught: +3               │
+│  ✓ Energy Used: -2 (12 remaining)  │
+│  ⚠ Disruption Occurred!             │
+├─────────────────────────────────────┤
+│     [Continue to Next Round]        │ 15%
+└─────────────────────────────────────┘
+```
+
+#### 4.2.3 End Game Screen
+```
+┌─────────────────────────────────────┐
+│                                     │
+│     [Animated Celebration]          │ 30%
+│   "Week Complete! Well Done!"       │
+│                                     │
+├─────────────────────────────────────┤
+│     Performance Summary             │
+│                                     │
+│  📚 Teaching Modules: 78/80         │ 50%
+│  🤝 Collaborative: 18/20            │
+│  📋 Admin Tasks: Completed          │
+│  ⚡ Final Energy: 8/16              │
+│  ⚠️  Penalty Points: 2               │
+│                                     │
+├─────────────────────────────────────┤
+│     [Play Again] [Share Results]    │ 20%
+└─────────────────────────────────────┘
+```
+
+### 4.3 Button Specifications
+
+#### 4.3.1 Lozenge Button Design
+- **Shape**: Rounded rectangle (border-radius: 25px)
+- **Size**: 70px × 70px (touch-friendly)
+- **Layout**: Horizontal row with 10px spacing
+- **Content**: Icon image + text label below
+
+#### 4.3.2 Button States
+```css
+.action-button {
+  /* Active State */
+  opacity: 1;
+  box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+  cursor: pointer;
+}
+
+.action-button.disabled {
+  /* Disabled State */
+  opacity: 0.4;
+  filter: grayscale(80%);
+  cursor: not-allowed;
+  box-shadow: none;
+}
+
+.action-button:active {
+  /* Pressed State */
+  transform: scale(0.95);
+}
+```
+
+### 4.4 Background Image System
+
+#### 4.4.1 Energy-Based Background Selection
+```javascript
+function getBackgroundImage(energy) {
+  const themePath = GAME_CONFIG.theme.basePath + 'backgrounds/';
+  
+  if (energy > 10) return themePath + 'energy-high.jpg';
+  if (energy >= 5) return themePath + 'energy-medium.jpg';
+  if (energy > 0) return themePath + 'energy-low.jpg';
+  return themePath + 'energy-depleted.jpg';
+}
+```
+
+#### 4.4.2 Image Requirements
+- **Format**: JPG or PNG
+- **Dimensions**: 1080×1920px (mobile portrait)
+- **Content**: Indian classroom setting with teacher
+- **Variations**:
+  - **High Energy**: Bright, engaged teacher, attentive students
+  - **Medium Energy**: Neutral, working steadily
+  - **Low Energy**: Tired teacher, some distraction
+  - **Depleted**: Exhausted, overwhelmed appearance
+
+---
+
+## 5. Game State Management
+
+### 5.1 State Object Structure
+
+```javascript
+const gameState = {
+  // Meta Information
+  currentDay: 1,              // 1-5
+  currentRound: 1,            // 1-8 (per day)
+  currentRoundId: 1,          // 1-40 (absolute)
+  phase: 'selection',         // 'selection' | 'result'
+  
+  // Player Resources
+  energy: 16,
+  dailyEnergy: 16,
+  
+  // Tasks
+  teachingRemaining: 80,
+  teachingCompleted: 0,
+  dailyTeachingCompleted: 0,
+  
+  adminRemaining: 4,
+  adminCompleted: 0,
+  
+  collaborativeRemaining: 20,
+  collaborativeCompleted: 0,
+  
+  // Penalties
+  penalties: {
+    teaching: 0,
+    admin: 0,
+    collaborative: 0,
+    meetings: 0,
+    total: 0
+  },
+  
+  // Events
+  fixedEvents: [11, 30],      // Round IDs for meetings
+  disruptions: [],             // Array of round IDs
+  currentDisruption: null,
+  
+  // Current Round State
+  selectedAction: null,
+  actionSuccess: true,
+  availableActions: ['teach', 'admin', 'collaborate', 'break'],
+  
+  // History
+  actionHistory: []
+};
+```
+
+### 5.2 State Transitions
+
+```javascript
+class GameEngine {
+  // Phase 1: Action Selection
+  startSelectionPhase(state) {
+    state.phase = 'selection';
+    state.availableActions = this.calculateAvailableActions(state);
+    this.applyRules(state, 'selection');
+  }
+  
+  // Phase 2: Action Execution
+  executeAction(state, action) {
+    state.selectedAction = action;
+    state.phase = 'result';
+    
+    // Check for disruption
+    if (this.isDisruptionRound(state)) {
+      state.actionSuccess = false;
+      state.currentDisruption = this.getRandomDisruption();
+    } else {
+      state.actionSuccess = true;
+      this.processAction(state, action);
+    }
+    
+    this.applyRules(state, 'result');
+  }
+  
+  // Advance to next round
+  advanceRound(state) {
+    state.actionHistory.push({
+      round: state.currentRoundId,
+      action: state.selectedAction,
+      success: state.actionSuccess
+    });
+    
+    state.currentRoundId++;
+    state.currentRound++;
+    
+    // Day transition
+    if (state.currentRound > 8) {
+      this.endDay(state);
+      state.currentDay++;
+      state.currentRound = 1;
+      this.startDay(state);
+    }
+    
+    // Game end
+    if (state.currentRoundId > 40) {
+      this.endGame(state);
+    }
+  }
+}
+```
+
+---
+
+## 6. Rule Engine Implementation
+
+### 6.1 Rule Evaluation System
+
+```javascript
+class RuleEngine {
+  constructor(rules) {
+    this.rules = rules;
+  }
+  
+  evaluate(state, phase = null) {
+    for (const rule of this.rules) {
+      // Filter by phase if specified
+      if (rule.phase && rule.phase !== phase) continue;
+      
+      // Evaluate condition
+      if (rule.condition(state)) {
+        // Execute action
+        rule.action(state);
+        
+        // If rule is terminal, stop evaluation
+        if (rule.terminal) break;
+      }
+    }
+  }
+  
+  addRule(rule) {
+    this.rules.push(rule);
+  }
+  
+  removeRule(ruleName) {
+    this.rules = this.rules.filter(r => r.name !== ruleName);
+  }
+}
+```
+
+### 6.2 Custom Rule Definition
+
+```javascript
+// Example: Add a new rule for "Friday energy boost"
+const fridayBoostRule = {
+  name: 'friday_energy_boost',
+  phase: 'selection',
+  condition: (state) => {
+    return state.currentDay === 5 && state.currentRound === 1;
+  },
+  action: (state) => {
+    state.energy += 4;
+    state.specialMessage = "It's Friday! You feel energized!";
+  },
+  terminal: false
+};
+
+// Add to game
+gameRuleEngine.addRule(fridayBoostRule);
+```
+
+---
+
+## 7. Progressive Web App Features
+
+### 7.1 Manifest Configuration
+
+```json
+{
+  "name": "Getting Things Done - Teacher Simulator",
+  "short_name": "GTD Teacher",
+  "description": "Time management game for teachers",
+  "start_url": "/index.html",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#ffffff",
+  "theme_color": "#4A90E2",
+  "icons": [
+    {
+      "src": "assets/icons/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "assets/icons/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}
+```
+
+### 7.2 Service Worker Features
+- Cache static assets (HTML, CSS, JS, images)
+- Offline gameplay capability
+- Background sync for score submission (if backend added later)
+
+---
+
+## 8. Customization Guide
+
+### 8.1 Changing Theme Assets
+
+```javascript
+// In config.js, update theme path
+GAME_CONFIG.theme = {
+  name: 'custom-theme',
+  basePath: './assets/themes/custom-theme/'
+};
+
+// Ensure folder structure matches:
+// ./assets/themes/custom-theme/
+//   ├── backgrounds/
+//   └── buttons/
+```
+
+### 8.2 Modifying Game Parameters
+
+```javascript
+// Change game length
+GAME_CONFIG.structure.totalRounds = 50;
+GAME_CONFIG.structure.roundsPerDay = 10;
+GAME_CONFIG.structure.totalDays = 5;
+
+// Adjust energy system
+GAME_CONFIG.energy.dailyStart = 20;
+GAME_CONFIG.energy.costs.teaching = 3;
+
+// Modify task requirements
+GAME_CONFIG.initialTasks.teachingModules = 100;
+```
+
+### 8.3 Adding New Rules
+
+```javascript
+// Add to GAME_RULES array in config.js
+GAME_RULES.push({
+  name: 'bonus_sunday_prep',
+  condition: (state) => {
+    return state.currentDay === 1 && state.currentRound === 1;
+  },
+  action: (state) => {
+    state.teachingRemaining -= 5;
+    state.notification = "Sunday prep helped! 5 modules pre-completed.";
+  }
+});
+```
+
+---
+
+## 9. Implementation Modules
+
+### 9.1 Module Breakdown
+
+#### config.js (150 lines)
+- Game configuration constants
+- Rule definitions
+- Theme configuration
+
+#### game-state.js (200 lines)
+- State object initialization
+- State persistence (localStorage)
+- State reset functionality
+
+#### game-engine.js (400 lines)
+- Rule engine implementation
+- Action processing logic
+- Task calculation functions
+- Disruption system
+- Day/game transition logic
+
+#### ui-controller.js (500 lines)
+- Screen rendering
+- Button state management
+- Animation handlers
+- Background image selection
+- Status display updates
+
+#### utils.js (100 lines)
+- Helper functions
+- Random number generation
+- Array shuffling
+- String formatting
+
+---
+
+## 10. Testing Requirements
+
+### 10.1 Functional Testing
+- ✓ All 40 rounds complete successfully
+- ✓ Energy system calculations accurate
+- ✓ Admin task compounding works correctly
+- ✓ Penalties applied at correct times
+- ✓ Disruptions occur randomly (3 total)
+- ✓ Staff meetings appear at fixed rounds
+- ✓ End game scoring accurate
+
+### 10.2 UI/UX Testing
+- ✓ Responsive on devices 320px-428px width
+- ✓ Touch targets minimum 44×44px
+- ✓ Buttons disabled when actions invalid
+- ✓ Background images load and transition smoothly
+- ✓ Animations perform without lag
+- ✓ Text readable on all backgrounds
+
+### 10.3 PWA Testing
+- ✓ Installs on iOS and Android
+- ✓ Works offline after first load
+- ✓ Splash screen displays correctly
+- ✓ Icon appears on home screen
+
+---
+
+## 11. Default Visual Asset Specifications
+
+### 11.1 Background Images (Indian Classroom Theme)
+
+**High Energy (energy > 10)**
+- Bright, well-lit classroom
+- Teacher standing confidently at front
+- Students engaged, hands raised
+- Clean, organized environment
+- Warm color palette (yellows, oranges)
+
+**Medium Energy (energy 5-10)**
+- Normal classroom lighting
+- Teacher at desk or mid-instruction
+- Students working independently
+- Neutral color palette (browns, beiges)
+
+**Low Energy (energy 1-4)**
+- Dimmer lighting, afternoon setting
+- Teacher sitting, papers spread out
+- Some students distracted
+- Cooler color palette (blues, grays)
+
+**Depleted Energy (energy 0)**
+- Evening/late afternoon lighting
+- Teacher exhausted at desk
+- Empty or chaotic classroom
+- Muted, desaturated colors
+
+### 11.2 Button Icons
+
+**Teach Button**
+- Icon: Book or blackboard symbol
+- Color: Blue (#4A90E2)
+- Label: "Teach"
+
+**Admin Button**
+- Icon: Clipboard or document stack
+- Color: Orange (#F5A623)
+- Label: "Admin"
+
+**Collaborate Button**
+- Icon: People or handshake symbol
+- Color: Green (#7ED321)
+- Label: "Collab"
+
+**Break Button**
+- Icon: Coffee cup or relaxation symbol
+- Color: Purple (#9013FE)
+- Label: "Break"
+
+**Meeting Button**
+- Icon: Conference table or calendar
+- Color: Red (#D0021B)
+- Label: "Meeting"
+
+---
+
+## 12. Performance Requirements
+
+- **Load Time**: < 3 seconds on 3G connection
+- **Frame Rate**: 60fps for animations
+- **Memory**: < 50MB RAM usage
+- **Storage**: < 10MB total app size
+- **Battery**: Minimal drain (no continuous background processes)
+
+---
+
+## 13. Accessibility Requirements
+
+- **Screen Reader**: All buttons and states have ARIA labels
+- **High Contrast**: Text maintains 4.5:1 contrast ratio
+- **Font Size**: Minimum 16px for body text
+- **Color Independence**: Information not conveyed by color alone
+- **Touch Gestures**: No complex gestures required
+
+---
+
+## 14. Future Enhancement Considerations
+
+### 14.1 Potential Features (Not in Initial Release)
+- Multiple difficulty levels
+- Different teacher personas/subjects
+- Backend score tracking and leaderboards
+- Social sharing of results
+- Achievement badges
+- Multi-language support
+- Sound effects and background music
+- Tutorial/practice mode
+- Save game state across sessions
+
+### 14.2 Extensibility Points
+- Plugin system for custom rules
+- API for external theme repositories
+- Webhook system for game events
+- Export game data to CSV/JSON
+
+---
+
+## 15. Deployment Instructions
+
+### 15.1 Hosting Requirements
+- Static file hosting (GitHub Pages, Netlify, Vercel)
+- HTTPS required for PWA features
+- Single URL access point
+
+### 15.2 Build Process
+1. Validate all configuration files
+2. Optimize images (compress to <500KB each)
+3. Minify JavaScript and CSS
+4. Generate service worker cache manifest
+5. Test on target devices
+6. Deploy to hosting platform
+
+---
+
+## 16. Documentation Requirements
+
+### 16.1 Developer Documentation
+- API reference for all modules
+- Rule creation guide
+- Theme creation guide
+- Configuration examples
+
+### 16.2 User Documentation
+- Game rules and objectives
+- How to play tutorial
+- FAQ section
+
+---
+
+## 17. Acceptance Criteria
+
+### Must Have
+- ✓ Complete 40-round gameplay
+- ✓ All game rules implemented correctly
+- ✓ Mobile-responsive design
+- ✓ PWA installable
+- ✓ Theme customization working
+- ✓ End game scoring display
+
+### Should Have
+- ✓ Smooth animations
+- ✓ Offline functionality
+- ✓ Accessibility features
+- ✓ Visual polish
+
+### Nice to Have
+- ✓ Sound effects
+- ✓ Advanced animations
+- ✓ Social sharing
+- ✓ Multiple themes included
+
+---
+
+## Appendix A: Game Flow Diagram
+
+```
+[Start Game]
+    ↓
+[Initialize State: Day 1, Round 1, Energy 16]
+    ↓
+[SELECTION PHASE]
+    ├→ Apply Rules
+    ├→ Calculate Available Actions
+    ├→ Render UI with Buttons
+    └→ Wait for User Selection
+        ↓
+    [User Selects Action]
+        ↓
+[RESULT PHASE]
+    ├→ Check for Disruption
+    ├→ Process Action (if no disruption)
+    ├→ Update Energy
+    ├→ Update Task Counters
+    ├→ Apply End-of-Round Rules
+    └→ Display Results
+        ↓
+    [User Clicks Continue]
+        ↓
+[Advance to Next Round]
+    ├→ Round++
+    ├→ If Round > 8: End Day, Reset Round, Day++
+    └→ If Day > 5: End Game
+        ↓
+[Check Game Status]
+    ├→ Game Continues → Return to SELECTION PHASE
+    └→ Game Ended → Display Final Summary
+```
+
+---
+
+**Document Version**: 1.0  
+**Last Updated**: January 2026  
+**Author**: System Specification  
+**Status**: Ready for Implementation

@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <meta name="description" content="Getting Things Done - A time management game for teachers">
+  <meta name="theme-color" content="#4A90E2">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <meta name="apple-mobile-web-app-title" content="GTD Teacher">
+  
+  <title>Getting Things Done - Teacher Simulator</title>
+  
+  <link rel="manifest" href="manifest.json">
+  <link rel="stylesheet" href="css/styles.css">
+  
+  <!-- PWA Icons -->
+  <link rel="icon" type="image/png" sizes="192x192" href="assets/icons/icon-192.png">
+  <link rel="icon" type="image/png" sizes="512x512" href="assets/icons/icon-512.png">
+  <link rel="apple-touch-icon" href="assets/icons/icon-192.png">
+</head>
+<body>
+  <div id="app">
+    <!-- Status Bar -->
+    <div id="status-bar">
+      <div id="day-display">Day 1</div>
+      <div id="round-display">Round 1</div>
+      <div id="energy-display">Energy: 16</div>
+    </div>
+    
+    <!-- Game Area (Selection Phase) -->
+    <div id="game-area">
+      <!-- Background Image -->
+      <div id="background-image">
+        <div id="special-message"></div>
+      </div>
+      
+      <!-- Task Summary Panel -->
+      <div id="task-summary">
+        <div class="task-item">
+          <span id="teaching-display">Teaching: 0/80</span>
+        </div>
+        <div class="task-item">
+          <span id="admin-display">Admin: 4</span>
+        </div>
+        <div class="task-item">
+          <span id="collaborative-display">Collaborative: 0/20</span>
+        </div>
+      </div>
+      
+      <!-- Action Buttons -->
+      <div id="action-buttons" role="group" aria-label="Action buttons">
+        <!-- Buttons will be dynamically generated -->
+      </div>
+    </div>
+    
+    <!-- Result Phase -->
+    <div id="result-phase">
+      <div id="result-message">Action completed successfully.</div>
+      <div id="result-details"></div>
+      <button id="continue-button" aria-label="Continue to next round">Continue</button>
+    </div>
+    
+    <!-- End Game Screen -->
+    <div id="end-game-screen">
+      <h1 id="end-game-title">Week Complete! Well Done!</h1>
+      <div id="end-game-summary"></div>
+      <button id="play-again-button" aria-label="Play again">Play Again</button>
+    </div>
+  </div>
+  
+  <!-- JavaScript Modules -->
+  <script src="js/config.js"></script>
+  <script src="js/utils.js"></script>
+  <script src="js/game-state.js"></script>
+  <script src="js/game-engine.js"></script>
+  <script src="js/ui-controller.js"></script>
+  
+  <!-- Main Application Script -->
+  <script>
+    // Initialize game when DOM is ready
+    document.addEventListener('DOMContentLoaded', () => {
+      // Create game state
+      const gameState = new GameState();
+      
+      // Try to load saved state
+      const loaded = gameState.load();
+      
+      // Create game engine
+      const gameEngine = new GameEngine(gameState);
+      
+      // Create UI controller
+      const uiController = new UIController(gameEngine);
+      
+      // Start game
+      if (!loaded) {
+        gameEngine.startSelectionPhase();
+      }
+      
+      // Initial render
+      uiController.render();
+      
+      // Register service worker for PWA
+      if ('serviceWorker' in navigator) {
+        window.addEventListener('load', () => {
+          navigator.serviceWorker.register('service-worker.js')
+            .then(registration => {
+              console.log('Service Worker registered:', registration);
+            })
+            .catch(error => {
+              console.log('Service Worker registration failed:', error);
+            });
+        });
+      }
+    });
+  </script>
+</body>
+</html>
+
