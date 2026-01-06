@@ -2,15 +2,15 @@
 
 const CACHE_NAME = 'gtd-teacher-v1';
 const urlsToCache = [
-  '/',
-  '/index.html',
-  '/css/styles.css',
-  '/js/config.js',
-  '/js/utils.js',
-  '/js/game-state.js',
-  '/js/game-engine.js',
-  '/js/ui-controller.js',
-  '/manifest.json'
+  './',
+  './index.html',
+  './css/styles.css',
+  './js/config.js',
+  './js/utils.js',
+  './js/game-state.js',
+  './js/game-engine.js',
+  './js/ui-controller.js',
+  './manifest.json'
 ];
 
 // Install event - cache resources
@@ -75,7 +75,7 @@ self.addEventListener('fetch', (event) => {
         }).catch(() => {
           // Network failed, return offline page if available
           if (event.request.destination === 'document') {
-            return caches.match('/index.html');
+            return caches.match('./index.html');
           }
         });
       })

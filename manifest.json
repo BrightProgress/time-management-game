@@ -2,7 +2,7 @@
   "name": "Getting Things Done - Teacher Simulator",
   "short_name": "GTD Teacher",
   "description": "Time management game for teachers",
-  "start_url": "/index.html",
+  "start_url": "./index.html",
   "display": "standalone",
   "orientation": "portrait",
   "background_color": "#ffffff",
