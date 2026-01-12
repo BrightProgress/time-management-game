@@ -51,7 +51,6 @@ function calculateDayRound(roundId) {
 
 /**
  * Get background image path based on energy level
- * Handles both correct extensions and double extensions (e.g., .jpg.png)
  */
 function getBackgroundImage(energy) {
   const themePath = GAME_CONFIG.theme.basePath + 'backgrounds/';
@@ -60,14 +59,6 @@ function getBackgroundImage(energy) {
   if (energy >= 5) return themePath + 'energy-medium.jpg';
   if (energy > 0) return themePath + 'energy-low.jpg';
   return themePath + 'energy-depleted.jpg';
-}
-
-/**
- * Get image path with fallback for double extensions
- * Tries the correct path first, then falls back to double extension if needed
- */
-function getImagePath(basePath, filename) {
-  return basePath + filename;
 }
 
 /**
