@@ -328,7 +328,7 @@ class GameEngine {
     this.state.energy = Math.min(this.state.energy, this.state.dailyEnergy);
     
     // Reset admin for new day
-    this.state.adminRemaining = GAME_CONFIG.initialTasks.adminUnitsPerDay;
+    this.state.adminRemaining += GAME_CONFIG.initialTasks.adminUnitsPerDay;
   }
 
   /**
