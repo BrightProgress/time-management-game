@@ -26,7 +26,14 @@ git clone <repository-url>
 cd time-management-game
 ```
 
-2. Serve the files using a local web server:
+2. Run the game locally:
+
+**Quick Start (Windows PowerShell):**
+```powershell
+.\run-local.ps1
+```
+
+**Or use any of these methods:**
 ```bash
 # Using Python 3
 python -m http.server 8000
@@ -38,7 +45,9 @@ npx http-server
 php -S localhost:8000
 ```
 
-3. Open your browser and navigate to `http://localhost:8000`
+3. Open your browser and navigate to `http://localhost:8000` (or the port shown)
+
+**📖 For detailed local development instructions, see [LOCAL_DEVELOPMENT.md](LOCAL_DEVELOPMENT.md)**
 
 ### PWA Installation
 
