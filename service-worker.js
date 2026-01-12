@@ -10,7 +10,20 @@ const urlsToCache = [
   './js/game-state.js',
   './js/game-engine.js',
   './js/ui-controller.js',
-  './manifest.json'
+  './manifest.json',
+  // Cache theme assets
+  './assets/themes/default/backgrounds/energy-high.jpg',
+  './assets/themes/default/backgrounds/energy-medium.jpg',
+  './assets/themes/default/backgrounds/energy-low.jpg',
+  './assets/themes/default/backgrounds/energy-depleted.jpg',
+  './assets/themes/default/buttons/teach.png',
+  './assets/themes/default/buttons/admin.png',
+  './assets/themes/default/buttons/collaborate.png',
+  './assets/themes/default/buttons/break.png',
+  './assets/themes/default/buttons/meeting.png',
+  './assets/themes/default/celebrations/completion.gif',
+  './assets/icons/icon-192.png',
+  './assets/icons/icon-512.png'
 ];
 
 // Install event - cache resources

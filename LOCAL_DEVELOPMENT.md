@@ -15,9 +15,21 @@ These features require the game to be served over HTTP (not opened as a `file://
 
 ### Option 1: Use the PowerShell Script (Recommended)
 
-Simply run the provided script:
+**If you get an execution policy error**, use one of these methods:
 
+**Method A: Bypass for this session only (Safest)**
 ```powershell
+powershell -ExecutionPolicy Bypass -File .\run-local.ps1
+```
+
+**Method B: Use the bypass version**
+```powershell
+.\run-local-bypass.ps1
+```
+
+**Method C: Change execution policy for current user (One-time setup)**
+```powershell
+Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope CurrentUser
 .\run-local.ps1
 ```
 
@@ -106,6 +118,28 @@ To test on your phone/tablet while developing:
 4. **Important**: Make sure your phone and computer are on the same Wi-Fi network.
 
 ## Troubleshooting
+
+### PowerShell Execution Policy Error
+
+If you see: `cannot be loaded because running scripts is disabled on this system`
+
+**Quick Fix (Recommended):**
+```powershell
+powershell -ExecutionPolicy Bypass -File .\run-local.ps1
+```
+
+**Or use the bypass version:**
+```powershell
+.\run-local-bypass.ps1
+```
+
+**Permanent Fix (One-time setup):**
+```powershell
+Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope CurrentUser
+```
+This allows scripts to run for your user account only (safe, doesn't affect system-wide settings).
+
+**Alternative:** Skip the script entirely and run the server commands directly (see options 2-5 below).
 
 ### Service Worker Not Registering
 

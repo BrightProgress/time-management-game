@@ -138,8 +138,42 @@ class UIController {
     this.resultPhase.style.display = 'none';
     this.endGameScreen.style.display = 'block';
     
+    // Show celebration animation if available
+    this.showCelebrationAnimation();
+    
     // Update end game summary
     this.updateEndGameSummary();
+  }
+
+  /**
+   * Show celebration animation on end game screen
+   */
+  showCelebrationAnimation() {
+    const celebrationPath = `${GAME_CONFIG.theme.basePath}celebrations/completion.gif`;
+    const celebrationImg = document.createElement('img');
+    celebrationImg.src = celebrationPath;
+    celebrationImg.alt = 'Celebration';
+    celebrationImg.style.cssText = 'max-width: 100%; height: auto; margin: 20px 0;';
+    celebrationImg.onerror = () => {
+      // Try with double extension if original fails
+      celebrationImg.src = celebrationPath.replace('.gif', '.gif.png');
+      celebrationImg.onerror = () => {
+        // If both fail, just don't show the animation
+        celebrationImg.style.display = 'none';
+      };
+    };
+    
+    // Insert celebration before the title
+    const title = document.getElementById('end-game-title');
+    if (title && !title.previousElementSibling || 
+        (title.previousElementSibling && !title.previousElementSibling.classList.contains('celebration-animation'))) {
+      const existingCelebration = document.querySelector('.celebration-animation');
+      if (existingCelebration) {
+        existingCelebration.remove();
+      }
+      celebrationImg.className = 'celebration-animation';
+      title.parentNode.insertBefore(celebrationImg, title);
+    }
   }
 
   /**
@@ -155,8 +189,33 @@ class UIController {
    * Update background image based on energy
    */
   updateBackgroundImage() {
-    const imagePath = getBackgroundImage(this.state.energy);
-    this.backgroundImage.style.backgroundImage = `url('${imagePath}')`;
+    let imagePath = getBackgroundImage(this.state.energy);
+    
+    // Try to load the image, with fallback to double extension
+    const testImg = new Image();
+    const setBackground = (path) => {
+      this.backgroundImage.style.backgroundImage = `url('${path}')`;
+    };
+    
+    testImg.onload = () => {
+      setBackground(imagePath);
+    };
+    
+    testImg.onerror = () => {
+      // Try with double extension if original fails
+      const fallbackPath = imagePath.replace('.jpg', '.jpg.png');
+      const fallbackImg = new Image();
+      fallbackImg.onload = () => {
+        setBackground(fallbackPath);
+      };
+      fallbackImg.onerror = () => {
+        // If both fail, set a default or leave empty
+        setBackground(imagePath); // Try original anyway
+      };
+      fallbackImg.src = fallbackPath;
+    };
+    
+    testImg.src = imagePath;
   }
 
   /**
@@ -211,13 +270,26 @@ class UIController {
     
     // Create icon
     const icon = document.createElement('img');
-    icon.src = `${GAME_CONFIG.theme.basePath}buttons/${config.icon}`;
+    const iconPath = `${GAME_CONFIG.theme.basePath}buttons/${config.icon}`;
     icon.alt = config.label;
     icon.className = 'button-icon';
+    icon.src = iconPath; // Try correct path first
+    
+    // Fallback for double extension if image fails to load
     icon.onerror = () => {
-      // Fallback if image doesn't exist
-      icon.style.display = 'none';
-      button.textContent = config.label;
+      const fallbackPath = iconPath.replace('.png', '.png.png');
+      if (icon.src !== fallbackPath) {
+        icon.src = fallbackPath;
+        icon.onerror = () => {
+          // If both fail, hide icon and show text
+          icon.style.display = 'none';
+          button.textContent = config.label;
+        };
+      } else {
+        // If both fail, hide icon and show text
+        icon.style.display = 'none';
+        button.textContent = config.label;
+      }
     };
     
     // Create label

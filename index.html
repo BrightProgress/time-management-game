@@ -18,6 +18,21 @@
   <link rel="icon" type="image/png" sizes="192x192" href="assets/icons/icon-192.png">
   <link rel="icon" type="image/png" sizes="512x512" href="assets/icons/icon-512.png">
   <link rel="apple-touch-icon" href="assets/icons/icon-192.png">
+  <script>
+    // Fallback for icons with double extension
+    document.addEventListener('DOMContentLoaded', () => {
+      const iconLinks = document.querySelectorAll('link[rel="icon"], link[rel="apple-touch-icon"]');
+      iconLinks.forEach(link => {
+        const img = new Image();
+        img.onerror = () => {
+          // Try with double extension
+          const originalHref = link.getAttribute('href');
+          link.setAttribute('href', originalHref.replace('.png', '.png.png'));
+        };
+        img.src = link.getAttribute('href');
+      });
+    });
+  </script>
 </head>
 <body>
   <div id="app">

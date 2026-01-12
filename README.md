@@ -28,9 +28,15 @@ cd time-management-game
 
 2. Run the game locally:
 
-**Quick Start (Windows PowerShell):**
+**Quick Start (Windows):**
+```cmd
+run-local.bat
+```
+
+**Or with PowerShell:**
 ```powershell
-.\run-local.ps1
+# If you get execution policy error, use:
+powershell -ExecutionPolicy Bypass -File .\run-local.ps1
 ```
 
 **Or use any of these methods:**
