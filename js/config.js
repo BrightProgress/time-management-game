@@ -16,7 +16,8 @@ const GAME_CONFIG = {
   fixedEvents: {
     staffMeetings: [
       { day: 2, round: 3 },
-      { day: 4, round: 6 }
+      { day: 3, round: 4 }
+      { day: 5, round: 6 }
     ]
   },
   
@@ -30,14 +31,14 @@ const GAME_CONFIG = {
   // Task Completion Rates
   taskRates: {
     teaching: {
-      energyHigh: { threshold: 7, units: 3 },
-      energyMedium: { threshold: 3, maxThreshold: 7, units: 2 },
-      energyLow: { threshold: 0, maxThreshold: 3, units: 1 },
+      energyHigh: { threshold: 9, units: 3 },
+      energyMedium: { threshold: 5, maxThreshold: 9, units: 2 },
+      energyLow: { threshold: 0, maxThreshold: 5, units: 1 },
       energyDepleted: { threshold: 0, exact: true, units: 0 }
     },
     admin: {
-      energyHigh: { threshold: 6, units: 4 },
-      energyLow: { threshold: 0, maxThreshold: 6, units: 2 },
+      energyHigh: { threshold: 8, units: 4 },
+      energyLow: { threshold: 0, maxThreshold: 8, units: 2 },
       energyDepleted: { threshold: 0, exact: true, units: 0 }
     },
     collaborative: {
@@ -48,7 +49,7 @@ const GAME_CONFIG = {
   
   // Energy System
   energy: {
-    dailyStart: 16,
+    dailyStart: 14,
     costs: {
       teaching: 2,
       admin: 2,
