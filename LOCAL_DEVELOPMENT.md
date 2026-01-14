@@ -7,7 +7,7 @@ This guide explains how to run and test the game on your local machine without d
 The game uses:
 - **Service Workers** (for PWA functionality)
 - **Relative paths** for assets
-- **LocalStorage** for game state
+- **SessionStorage** for game state
 
 These features require the game to be served over HTTP (not opened as a `file://` URL). Opening `index.html` directly in a browser may cause issues.
 

@@ -106,7 +106,7 @@ class GameState {
   }
 
   /**
-   * Save state to localStorage
+   * Save state to sesionStorage
    */
   save() {
     try {
@@ -128,18 +128,18 @@ class GameState {
         disruptions: this.disruptions,
         actionHistory: this.actionHistory
       };
-      localStorage.setItem('gtd_game_state', JSON.stringify(stateData));
+      sessionStorage.setItem('gtd_game_state', JSON.stringify(stateData));
     } catch (error) {
       console.warn('Failed to save game state:', error);
     }
   }
 
   /**
-   * Load state from localStorage
+   * Load state from sessionStorage
    */
   load() {
     try {
-      const stateData = localStorage.getItem('gtd_game_state');
+      const stateData = sessionStorage.getItem('gtd_game_state');
       if (!stateData) return false;
       
       const data = JSON.parse(stateData);
@@ -173,7 +173,7 @@ class GameState {
    */
   clearSave() {
     try {
-      localStorage.removeItem('gtd_game_state');
+      sessionStorage.removeItem('gtd_game_state');
     } catch (error) {
       console.warn('Failed to clear game state:', error);
     }

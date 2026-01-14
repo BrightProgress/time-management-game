@@ -16,14 +16,14 @@ const GAME_CONFIG = {
   fixedEvents: {
     staffMeetings: [
       { day: 2, round: 3 },
-      { day: 3, round: 4 }
-      { day: 5, round: 6 }
+      { day: 3, round: 4 },
+      { day: 4, round: 6 }
     ]
   },
   
   // Initial Task Load
   initialTasks: {
-    teachingModules: 80,
+    teachingModules: 60,
     collaborativeUnits: 20,
     adminUnitsPerDay: 4
   },
@@ -49,9 +49,9 @@ const GAME_CONFIG = {
   
   // Energy System
   energy: {
-    dailyStart: 14,
+    dailyStart: 12,
     costs: {
-      teaching: 2,
+      teaching: 3,
       admin: 2,
       collaborative: 1,
       meeting: 1

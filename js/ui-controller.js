@@ -245,6 +245,7 @@ class UIController {
     icon.src = iconPath;
     icon.alt = config.label;
     icon.className = 'button-icon';
+    icon.style.pointerEvents = 'none';
     icon.onerror = () => {
       // Fallback if image doesn't exist
       icon.style.display = 'none';
@@ -255,7 +256,8 @@ class UIController {
     const label = document.createElement('span');
     label.className = 'button-label';
     label.textContent = config.label;
-    
+    label.style.pointerEvents = 'none';
+
     button.appendChild(icon);
     button.appendChild(label);
     

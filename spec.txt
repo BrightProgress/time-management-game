@@ -627,7 +627,7 @@ GAME_RULES.push({
 
 #### game-state.js (200 lines)
 - State object initialization
-- State persistence (localStorage)
+- State persistence (sessionStorage)
 - State reset functionality
 
 #### game-engine.js (400 lines)
