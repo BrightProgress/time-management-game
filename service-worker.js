@@ -1,6 +1,6 @@
 // Service Worker for Offline Capability
 
-const CACHE_NAME = 'gtd-teacher-v1';
+const CACHE_NAME = 'gtd-teacher-v20260114';
 const urlsToCache = [
   './',
   './index.html',
